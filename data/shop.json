@@ -1,0 +1,22 @@
+{
+  "shops": [
+    {
+      "userId": "u_aisha",
+      "status": "pending",
+      "name": "Khofi Benson Shop",
+      "bio": "",
+      "category": "Beauty",
+      "location": "Accra",
+      "sells": "Bags",
+      "email": "khofibensonstudios@gmail.com",
+      "phone": "0553113939",
+      "socials": {},
+      "createdAt": "2026-08-17T16:51:58.406Z",
+      "updatedAt": "2026-08-17T17:37:51.598Z",
+      "logoUrl": "/api/media/08914796-7aa7-466e-9721-5a9b470825b0.jpg",
+      "submittedAt": "2026-08-17T17:37:51.598Z"
+    }
+  ],
+  "products": [],
+  "orders": []
+}
