@@ -7,11 +7,13 @@ import {
   Check,
   CheckCheck,
   ChevronLeft,
+  FileText,
   Image as ImageIcon,
+  MapPin,
   Mic,
+  Paperclip,
   Phone,
   SendHorizontal,
-  Signal,
   Square,
   Trash2,
   Video,
@@ -164,6 +166,7 @@ function MessagesInner() {
   const [recSecs, setRecSecs] = useState(0);
   const [selectedMsg, setSelectedMsg] = useState<string | null>(null);
   const [lightbox, setLightbox] = useState<string | null>(null);
+  const [attachOpen, setAttachOpen] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
   const findInputRef = useRef<HTMLInputElement>(null);
   const textInputRef = useRef<HTMLInputElement>(null);
@@ -752,11 +755,41 @@ function MessagesInner() {
                 )}
               </div>
 
+              {/* Attach menu */}
+              {attachOpen && (
+                <div className="shrink-0 border-t border-black/6 bg-white px-4 py-3">
+                  <div className="grid grid-cols-4 gap-4">
+                    <AttachOption icon={Camera} label="Camera" color="bg-rose-500" onClick={() => { setAttachOpen(false); cameraRef.current?.click(); }} />
+                    <AttachOption icon={ImageIcon} label="Gallery" color="bg-violet-500" onClick={() => { setAttachOpen(false); galleryRef.current?.click(); }} />
+                    <AttachOption icon={MapPin} label="Location" color="bg-emerald-500" onClick={() => {
+                      setAttachOpen(false);
+                      if (!navigator.geolocation) return;
+                      navigator.geolocation.getCurrentPosition(
+                        (pos) => { void pushMessage(`📍 Location: ${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`); },
+                        () => {},
+                        { enableHighAccuracy: true },
+                      );
+                    }} />
+                    <AttachOption icon={FileText} label="Document" color="bg-blue-500" onClick={() => { setAttachOpen(false); }} />
+                  </div>
+                </div>
+              )}
+
               {/* Composer */}
               {other && (
-                <div className="shrink-0 border-t border-black/6 bg-white px-2 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+                <div className="shrink-0 border-t border-black/6 bg-white px-2 py-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+                  <HiddenFileInput
+                    inputRef={cameraRef}
+                    accept="image/*"
+                    capture="environment"
+                    onChange={(e) => { const f = e.target.files?.[0]; e.currentTarget.value = ""; if (f) void uploadAndSend(f, "image"); }}
+                  />
+                  <HiddenFileInput
+                    inputRef={galleryRef}
+                    accept="image/*"
+                    onChange={(e) => { const f = e.target.files?.[0]; e.currentTarget.value = ""; if (f) void uploadAndSend(f, "image"); }}
+                  />
                   {recording ? (
-                    /* Recording bar */
                     <div className="flex items-center gap-2 px-1">
                       <button
                         type="button"
@@ -776,70 +809,60 @@ function MessagesInner() {
                       <button
                         type="button"
                         onClick={stopRecording}
-                        className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#e85d04] text-white shadow-md"
+                        className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#25d366] text-white shadow-md"
                         aria-label="Send voice note"
                       >
                         <SendHorizontal className="h-5 w-5" />
                       </button>
                     </div>
                   ) : (
-                    /* Normal composer */
-                    <form onSubmit={(e) => void send(e)} className="flex items-center gap-1">
-                      <HiddenFileInput
-                        inputRef={cameraRef}
-                        accept="image/*"
-                        capture="environment"
-                        onChange={(e) => { const f = e.target.files?.[0]; e.currentTarget.value = ""; if (f) void uploadAndSend(f, "image"); }}
-                      />
-                      <HiddenFileInput
-                        inputRef={galleryRef}
-                        accept="image/*"
-                        onChange={(e) => { const f = e.target.files?.[0]; e.currentTarget.value = ""; if (f) void uploadAndSend(f, "image"); }}
-                      />
-                      <button
-                        type="button"
-                        disabled={uploading}
-                        onClick={() => cameraRef.current?.click()}
-                        className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-[#8a8580] hover:bg-black/5"
-                        title="Camera"
-                      >
-                        <Camera className="h-[22px] w-[22px]" />
-                      </button>
-                      <button
-                        type="button"
-                        disabled={uploading}
-                        onClick={() => galleryRef.current?.click()}
-                        className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-[#8a8580] hover:bg-black/5"
-                        title="Photo"
-                      >
-                        <ImageIcon className="h-[22px] w-[22px]" />
-                      </button>
+                    <form onSubmit={(e) => void send(e)} className="flex items-end gap-1">
                       <div className="relative min-w-0 flex-1">
-                        <input
-                          ref={textInputRef}
-                          className="h-11 w-full rounded-full bg-[#f4f1eb] pl-4 pr-10 text-[15px] outline-none placeholder:text-[#b0aca6]"
-                          value={text}
-                          onChange={(e) => onDraftChange(e.target.value)}
-                          onFocus={() => setEmojiOpen(false)}
-                          placeholder={uploading ? "Sending…" : "Message…"}
-                          enterKeyHint="send"
-                        />
-                        <span className="absolute right-1 top-1/2 -translate-y-1/2">
+                        <div className="flex items-center rounded-full bg-[#f4f1eb]">
                           <EmojiComposerButton
                             open={emojiOpen}
-                            setOpen={setEmojiOpen}
+                            setOpen={(v) => { setEmojiOpen(v); setAttachOpen(false); }}
                             onPick={(emoji) => {
                               setText((t) => { const next = t + emoji; onDraftChange(next); return next; });
                             }}
                           />
-                        </span>
+                          <input
+                            ref={textInputRef}
+                            className="h-11 min-w-0 flex-1 bg-transparent text-[15px] outline-none placeholder:text-[#b0aca6]"
+                            value={text}
+                            onChange={(e) => onDraftChange(e.target.value)}
+                            onFocus={() => { setEmojiOpen(false); setAttachOpen(false); }}
+                            placeholder={uploading ? "Sending…" : "Message"}
+                            enterKeyHint="send"
+                          />
+                          <button
+                            type="button"
+                            disabled={uploading}
+                            onClick={() => { setAttachOpen((v) => !v); setEmojiOpen(false); }}
+                            className="grid h-10 w-10 shrink-0 place-items-center text-[#8a8580]"
+                            aria-label="Attach"
+                          >
+                            <Paperclip className="h-[21px] w-[21px]" />
+                          </button>
+                          {!text.trim() && (
+                            <button
+                              type="button"
+                              disabled={uploading}
+                              onClick={() => { setAttachOpen(false); cameraRef.current?.click(); }}
+                              className="grid h-10 w-10 shrink-0 place-items-center text-[#8a8580]"
+                              title="Camera"
+                            >
+                              <Camera className="h-[21px] w-[21px]" />
+                            </button>
+                          )}
+                        </div>
                       </div>
                       {text.trim() ? (
                         <button
                           type="button"
                           disabled={uploading}
                           onClick={() => void send()}
-                          className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#e85d04] text-white shadow-md"
+                          className="mb-0.5 grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#e85d04] text-white shadow-md"
                           aria-label="Send"
                         >
                           <SendHorizontal className="h-5 w-5" />
@@ -849,10 +872,10 @@ function MessagesInner() {
                           type="button"
                           disabled={uploading}
                           onClick={startRecording}
-                          className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#f4f1eb] text-[#8a8580] hover:bg-[#e8e5df]"
+                          className="mb-0.5 grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#e85d04] text-white shadow-md"
                           aria-label="Record voice note"
                         >
-                          <Mic className="h-[22px] w-[22px]" />
+                          <Mic className="h-[21px] w-[21px]" />
                         </button>
                       )}
                     </form>
@@ -915,5 +938,16 @@ function MessagesInner() {
         />
       )}
     </SiteChrome>
+  );
+}
+
+function AttachOption({ icon: Icon, label, color, onClick }: { icon: typeof Camera; label: string; color: string; onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} className="flex flex-col items-center gap-1.5">
+      <span className={`grid h-12 w-12 place-items-center rounded-full text-white ${color}`}>
+        <Icon className="h-5 w-5" />
+      </span>
+      <span className="text-[11px] font-medium text-[#6f6a64]">{label}</span>
+    </button>
   );
 }
